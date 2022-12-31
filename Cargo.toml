@@ -1,0 +1,19 @@
+[package]
+name = "swissdata"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+calamine = "0.19.1"
+chrono = "0.4.23"
+csv = "1.1.6"
+dirs = "4.0.0"
+encoding_rs = "0.8.31"
+encoding_rs_io = "0.1.7"
+reqwest = { version = "0.11.13", features = ["blocking"] }
+serde = { version = "1.0.152", features = ["derive"] }
+serde_repr = "0.1.10"
+urlencoding = "2.1.2"
+zip = "0.6.3"
