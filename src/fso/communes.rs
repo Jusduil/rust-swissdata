@@ -34,6 +34,7 @@
 //! [terms]: https://www.bfs.admin.ch/bfs/en/home/fso/swiss-federal-statistical-office/terms-of-use.html
 
 use crate::fso::asset::{Asset, AssetId};
+use crate::i_serde;
 use crate::tools::Downloader;
 use crate::Date;
 use csv::{DeserializeRecordsIntoIter, ReaderBuilder as CsvReaderBuilder};
@@ -251,7 +252,7 @@ pub struct Canton {
     id: CantonId,
     abbreviation: String,
     long_name: String,
-    #[serde(with = "crate::serde::date_dd_mm_yyyyy_dotted")]
+    #[serde(with = "i_serde::date_dd_mm_yyyyy_dotted")]
     date_of_change: Date,
 }
 impl Canton {
@@ -284,13 +285,13 @@ pub struct District {
     entry_mode: DistrictMode,
     admission_number: MutationId,
     admission_mode: AdmissionMode,
-    #[serde(with = "crate::serde::date_dd_mm_yyyyy_dotted")]
+    #[serde(with = "i_serde::date_dd_mm_yyyyy_dotted")]
     admission_date: Date,
     abolition_number: Option<MutationId>,
     abolition_mode: Option<AbolitionMode>,
-    #[serde(with = "crate::serde::option_date_dd_mm_yyyyy_dotted")]
+    #[serde(with = "i_serde::option_date_dd_mm_yyyyy_dotted")]
     abolition_date: Option<Date>,
-    #[serde(with = "crate::serde::date_dd_mm_yyyyy_dotted")]
+    #[serde(with = "i_serde::date_dd_mm_yyyyy_dotted")]
     date_of_change: Date,
 }
 impl District {
@@ -367,13 +368,13 @@ pub struct Municipality {
     status: Status,
     admission_number: MutationId,
     admission_mode: AdmissionMode,
-    #[serde(with = "crate::serde::date_dd_mm_yyyyy_dotted")]
+    #[serde(with = "i_serde::date_dd_mm_yyyyy_dotted")]
     admission_date: Date,
     abolition_number: Option<MutationId>,
     abolition_mode: Option<AbolitionMode>,
-    #[serde(with = "crate::serde::option_date_dd_mm_yyyyy_dotted")]
+    #[serde(with = "i_serde::option_date_dd_mm_yyyyy_dotted")]
     abolition_date: Option<Date>,
-    #[serde(with = "crate::serde::date_dd_mm_yyyyy_dotted")]
+    #[serde(with = "i_serde::date_dd_mm_yyyyy_dotted")]
     date_of_change: Date,
 }
 impl Municipality {

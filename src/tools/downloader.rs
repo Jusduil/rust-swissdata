@@ -1,4 +1,4 @@
-//! Module with some trait/struct use in this crate
+//! Trait for implement downloader compatible with all dataset
 
 use dirs;
 use reqwest;

@@ -1,4 +1,4 @@
-pub(crate) mod option_date_dd_mm_yyyyy_dotted {
+pub mod option_date_dd_mm_yyyyy_dotted {
     use crate::Date;
     use serde::{self, Deserialize, Deserializer, Serializer};
 
@@ -26,7 +26,7 @@ pub(crate) mod option_date_dd_mm_yyyyy_dotted {
             .transpose()
     }
 }
-pub(crate) mod date_dd_mm_yyyyy_dotted {
+pub mod date_dd_mm_yyyyy_dotted {
     use crate::Date;
     use serde::{self, Deserialize, Deserializer, Serializer};
 
