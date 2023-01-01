@@ -1,9 +1,12 @@
-//! This module parse and structure data for Commune, District and Canton on Switzerland.
+//! This module parse and structure data for Commune, District and Canton on
+//! Switzerland.
 //!
 //! - eCH-071 norm [[de][eCH-0071-de]] [[fr][eCH-0071-fr]]
 //! - Some more explication
-//!   - [Liste historisée des communes de la Suisse - Explication et utilisation][expl-fr]
-//!   - [Historisiertes Gemeindeverzeichnis der Schweiz - Erläuterungen und Anwendungen][expl-de]
+//!   - [Liste historisée des communes de la Suisse - Explication et
+//!     utilisation][expl-fr]
+//!   - [Historisiertes Gemeindeverzeichnis der Schweiz - Erläuterungen und
+//!     Anwendungen][expl-de]
 //! - Explication webpage
 //!   - [Historisiertes Gemeindeverzeichnis][webexpl-de]
 //!   - [Liste historisée des communes][webexpl-fr]
@@ -14,7 +17,8 @@
 //!   - Elenco storicizzato dei Comuni della Svizzera (formato TXT)
 //!   - [download][data-txt]
 //!   - [Terms of use 'OPEN-BY-ASK'][terms]
-//! - Alternative data source (**FSO**: `dz-b-00.04-hgv-02`) (not supported, but same content)
+//! - Alternative data source (**FSO**: `dz-b-00.04-hgv-02`) (not supported, but
+//!   same content)
 //!   - Historisiertes Gemeindeverzeichnis der Schweiz (XML Format)
 //!   - Liste historisée des communes de la Suisse (format XML)
 //!   - Elenco storicizzato dei Comuni della Svizzera (formato XML)
@@ -33,21 +37,22 @@
 //! [data-xml]: https://dam-api.bfs.admin.ch/hub/api/dam/assets/23886070/master
 //! [terms]: https://www.bfs.admin.ch/bfs/en/home/fso/swiss-federal-statistical-office/terms-of-use.html
 
+use std::collections::HashMap;
+use std::error;
+use std::fs::File;
+
+use csv::{DeserializeRecordsIntoIter, ReaderBuilder as CsvReaderBuilder};
+use encoding_rs;
+use encoding_rs::ISO_8859_3 as ENCODING;
+use encoding_rs_io::{DecodeReaderBytes, DecodeReaderBytesBuilder};
+use serde::Deserialize;
+use serde_repr::Deserialize_repr;
+use zip::{read::ZipFile, ZipArchive};
+
 use crate::fso::asset::{Asset, AssetId};
 use crate::i_serde;
 use crate::tools::Downloader;
 use crate::Date;
-use csv::{DeserializeRecordsIntoIter, ReaderBuilder as CsvReaderBuilder};
-use encoding_rs;
-use encoding_rs_io::{DecodeReaderBytes, DecodeReaderBytesBuilder};
-use serde::Deserialize;
-use serde_repr::Deserialize_repr;
-use std::collections::HashMap;
-use std::error;
-use std::fs::File;
-use zip::{read::ZipFile, ZipArchive};
-
-use encoding_rs::ISO_8859_3 as ENCODING;
 
 /// FSO Asset id for TXT format
 pub const TXT_ASSET_ID: AssetId = 23886071;
@@ -79,8 +84,8 @@ pub struct DataStore {
     municipalities: String,
 }
 impl DataStore {
-    /// Load data (format TXT only for now) with downloader, keep a reference to zip file
-    /// downloaded
+    /// Load data (format TXT only for now) with downloader, keep a reference to
+    /// zip file downloaded
     pub fn load<D>(downloader: D) -> Result<Self, Box<dyn error::Error>>
     where
         D: Downloader,
@@ -140,14 +145,17 @@ impl DataStore {
             .from_reader(decoder)
             .into_deserialize())
     }
+
     /// Iter on all cantons
     pub fn cantons(&mut self) -> Result<Iter<Canton>, Box<dyn error::Error>> {
         self.iter(self.cantons.clone())
     }
+
     /// Iter on all districts
     pub fn districts(&mut self) -> Result<Iter<District>, Box<dyn error::Error>> {
         self.iter(self.districts.clone())
     }
+
     /// Iter on all municipalities
     pub fn municipalities(&mut self) -> Result<Iter<Municipality>, Box<dyn error::Error>> {
         self.iter(self.municipalities.clone())
@@ -167,16 +175,18 @@ pub type MunicipalityId = u16;
 /// Represent a identifier of mutation (change, admission or abolition)
 pub type MutationId = u16;
 
-/// Status of municipality. All step (municipality, canton and national) are done if status is
-/// [Status::Final]
+/// Status of municipality. All step (municipality, canton and national) are
+/// done if status is [Status::Final]
 ///
-/// Dieses Merkmal dient der Unterscheidung von Mutationen, die alle Verfahren auf Stufe Gemeinde,
-/// Kanton und Bund durchlaufen haben (1 = definitiv), und denjenigen, die noch nicht alle
-/// Verfahren durchlaufen haben (0 = provisorisch).
+/// Dieses Merkmal dient der Unterscheidung von Mutationen, die alle Verfahren
+/// auf Stufe Gemeinde, Kanton und Bund durchlaufen haben (1 = definitiv), und
+/// denjenigen, die noch nicht alle Verfahren durchlaufen haben (0 =
+/// provisorisch).
 ///
-/// Ce caractère sert à différencier les mutations qui sont passées par toutes les étapes, à
-/// l’échelon de la commune, du canton et de la Confédération (1 = définitif) de celles qui n’ont
-/// pas encore franchi toutes les étapes (0 = provisoire).
+/// Ce caractère sert à différencier les mutations qui sont passées par toutes
+/// les étapes, à l’échelon de la commune, du canton et de la Confédération (1 =
+/// définitif) de celles qui n’ont pas encore franchi toutes les étapes (0 =
+/// provisoire).
 #[derive(Copy, Clone, Debug, Deserialize_repr)]
 #[repr(u8)]
 pub enum Status {
@@ -223,7 +233,8 @@ pub enum AdmissionMode {
     AttachmentToAnother = 24,
     /// Gebietsänderung Gemeinde / Modification du territoire de la commune
     TerritoryMunicipalityChange = 26,
-    /// Formale Neunummerierung Gemeinde/Bezirk / Renumérotation formelle de la commune/du district
+    /// Formale Neunummerierung Gemeinde/Bezirk / Renumérotation formelle de la
+    /// commune/du district
     FormalRenumbering = 27,
 }
 #[derive(Copy, Clone, Debug, Deserialize_repr)]
@@ -238,7 +249,8 @@ pub enum AbolitionMode {
     AttachmentToAnother = 24,
     /// Gebietsänderung Gemeinde / Modification du territoire de la commune
     TerritoryMunicipalityChange = 26,
-    /// Formale Neunummerierung Gemeinde/Bezirk / Renumérotation formelle de la commune/du district
+    /// Formale Neunummerierung Gemeinde/Bezirk / Renumérotation formelle de la
+    /// commune/du district
     FormalRenumbering = 27,
     /// Aufhebung Gemeinde/Bezirk / Radiation commune/district
     Radiation = 29,
@@ -260,14 +272,17 @@ impl Canton {
     pub fn id(&self) -> CantonId {
         self.id
     }
+
     /// Canton's abbreviation / Kantonskürzel / Abréviation du canton
     pub fn abbreviation(&self) -> &str {
         self.abbreviation.as_str()
     }
+
     /// Canton's name / Kantonsname / Nom du canton
     pub fn name(&self) -> &str {
         self.long_name.as_str()
     }
+
     /// Change date / Änderungsdatum / Date de modification
     pub fn date_of_change(&self) -> &Date {
         &self.date_of_change
@@ -301,36 +316,42 @@ impl District {
     pub fn hist_id(&self) -> DistrictHistId {
         self.hist_id
     }
+
     /// Canton identifier
     /// / Kantonsnummer
     /// / Numéro du canton
     pub fn canton_id(&self) -> CantonId {
         self.canton_id
     }
+
     /// District identifier
     /// / Bezirksnummer
     /// / Numéro du district
     pub fn id(&self) -> DistrictId {
         self.id
     }
+
     /// District name
     /// / Bezirksname
     /// / Nom du district
     pub fn name(&self) -> &str {
         self.long_name.as_str()
     }
+
     /// District abbreviated name
     /// / Bezirksname kurz
     /// / Nom du district en abrégé
     pub fn short_name(&self) -> &str {
         self.short_name.as_str()
     }
+
     /// Entry type
     /// / Art des Eintrages
     /// / Type d’entrée
     pub fn entry_mode(&self) -> DistrictMode {
         self.entry_mode
     }
+
     /// Information about district admission
     pub fn admission(&self) -> Mutation<AdmissionMode> {
         Mutation {
@@ -339,6 +360,7 @@ impl District {
             date: &self.admission_date,
         }
     }
+
     /// Information about district abolition (if is abolited)
     pub fn abolition(&self) -> Option<Mutation<AbolitionMode>> {
         Some(Mutation {
@@ -347,6 +369,7 @@ impl District {
             date: self.abolition_date.as_ref()?,
         })
     }
+
     /// Date of the last change
     /// / Änderungsdatum
     /// / Date de modification
@@ -382,34 +405,42 @@ impl Municipality {
     pub fn hist_id(&self) -> MunicipalityHistId {
         self.hist_id
     }
+
     /// District historical identifier
     pub fn district_hist_id(&self) -> DistrictHistId {
         self.district_hist_id
     }
+
     /// Abbreviation of canton (two letter)
     pub fn canton_abbreviation(&self) -> &str {
         self.canton_abbreviation.as_str()
     }
+
     /// Municipality identifier
     pub fn id(&self) -> MunicipalityId {
         self.id
     }
+
     /// Municipality official name
     pub fn name(&self) -> &str {
         self.long_name.as_str()
     }
+
     /// Municipality abbreviated name
     pub fn short_name(&self) -> &str {
         self.short_name.as_str()
     }
+
     /// Type of municipality
     pub fn entry_mode(&self) -> MunicipalityMode {
         self.entry_mode
     }
+
     /// Status of change
     pub fn status(&self) -> Status {
         self.status
     }
+
     /// Information about district admission
     pub fn admission(&self) -> Mutation<AdmissionMode> {
         Mutation {
@@ -418,6 +449,7 @@ impl Municipality {
             date: &self.admission_date,
         }
     }
+
     /// Information about district abolition (if is abolited)
     pub fn abolition(&self) -> Option<Mutation<AbolitionMode>> {
         Some(Mutation {
@@ -426,6 +458,7 @@ impl Municipality {
             date: self.abolition_date.as_ref()?,
         })
     }
+
     /// Date of the last change
     /// / Änderungsdatum
     /// / Date de modification
@@ -446,10 +479,12 @@ impl<Mode: Copy> Mutation<'_, Mode> {
     pub fn id(&self) -> MutationId {
         self.number
     }
+
     /// Reason of mutation
     pub fn mode(&self) -> Mode {
         self.mode
     }
+
     /// Date of mutation
     pub fn date(&self) -> &Date {
         self.date

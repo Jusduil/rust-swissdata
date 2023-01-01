@@ -1,6 +1,7 @@
 pub mod option_date_dd_mm_yyyyy_dotted {
-    use crate::Date;
     use serde::{self, Deserialize, Deserializer, Serializer};
+
+    use crate::Date;
 
     const FORMAT: &'static str = "%d.%m.%Y";
 
@@ -27,8 +28,9 @@ pub mod option_date_dd_mm_yyyyy_dotted {
     }
 }
 pub mod date_dd_mm_yyyyy_dotted {
-    use crate::Date;
     use serde::{self, Deserialize, Deserializer, Serializer};
+
+    use crate::Date;
 
     const FORMAT: &'static str = "%d.%m.%Y";
 

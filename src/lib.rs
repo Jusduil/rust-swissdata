@@ -23,9 +23,7 @@ pub mod fso;
 pub mod tools;
 
 // internal tools
-use tools::internal::serde as i_serde;
-
 // TODO
 // https://www.cadastre.ch/fr/av.html
-
 pub use chrono::NaiveDate as Date;
+use tools::internal::serde as i_serde;

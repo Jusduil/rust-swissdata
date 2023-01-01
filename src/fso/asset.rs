@@ -1,7 +1,8 @@
 //! [Asset] represent a FSO Datasource
-use crate::tools::Downloader;
 use std::io::Read;
 use std::path::PathBuf;
+
+use crate::tools::Downloader;
 
 /// Type for id of FSO asset
 pub type AssetId = u32;
@@ -13,12 +14,16 @@ impl Asset {
         let id = self.0;
         format!("https://dam-api.bfs.admin.ch/hub/api/dam/assets/{id}/master")
     }
-    /// Url for BibTeX reference for citation of data source (can be mandatory by law)
+
+    /// Url for BibTeX reference for citation of data source (can be mandatory
+    /// by law)
     pub fn url_bibtex(&self) -> String {
         let id = self.0;
         format!("https://dam-api.bfs.admin.ch/hub/api/dam/assets/{id}/bibtex")
     }
-    /// Url for RIS reference for citation of data source (can be mandatory by law)
+
+    /// Url for RIS reference for citation of data source (can be mandatory by
+    /// law)
     pub fn url_ris(&self) -> String {
         let id = self.0;
         format!("https://dam-api.bfs.admin.ch/hub/api/dam/assets/{id}/ris")
@@ -31,6 +36,7 @@ impl Asset {
     {
         downloader.cache_get(&self.url_data())
     }
+
     /// Download bibtex
     pub fn bibtex<D>(&self, downloader: D) -> Result<String, Box<dyn std::error::Error>>
     where

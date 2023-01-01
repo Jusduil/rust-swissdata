@@ -1,0 +1,10 @@
+
+#fn_single_line = true
+
+#max_width = 120
+
+reorder_impl_items = true
+group_imports = "StdExternalCrate"
+
+wrap_comments = true
+#where_single_line = true

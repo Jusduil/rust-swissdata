@@ -1,12 +1,13 @@
 //! Trait for implement downloader compatible with all dataset
 
-use dirs;
-use reqwest;
 use std::error;
 use std::fs::{self, File};
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
+
+use dirs;
+use reqwest;
 use urlencoding;
 
 /// Downloader trait for use a custom lib for download and cache data
@@ -44,9 +45,11 @@ pub trait Downloader {
 impl Downloader for &reqwest::blocking::Client {
     type DownloadError = reqwest::Error;
     type Read = reqwest::blocking::Response;
+
     fn default_validity(&self) -> Duration {
         Duration::new(60 * 60 * 24, 0)
     }
+
     fn cache_path(&self, url: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
         let path = dirs::cache_dir()
             .ok_or("Can't determine cache directory")?
@@ -54,6 +57,7 @@ impl Downloader for &reqwest::blocking::Client {
         fs::create_dir_all(&path)?;
         Ok(path.join(urlencoding::encode(url).into_owned()))
     }
+
     fn http_get(&self, url: &str) -> Result<Self::Read, Self::DownloadError> {
         dbg!(url);
         Ok(self.get(url).send()?.error_for_status()?)
