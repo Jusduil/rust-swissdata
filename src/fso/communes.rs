@@ -48,8 +48,8 @@ use csv::{DeserializeRecordsIntoIter, ReaderBuilder as CsvReaderBuilder};
 use encoding_rs;
 use encoding_rs::ISO_8859_3 as ENCODING;
 use encoding_rs_io::{DecodeReaderBytes, DecodeReaderBytesBuilder};
-use serde::Deserialize;
-use serde_repr::Deserialize_repr;
+use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use zip::{read::ZipFile, ZipArchive};
 
 use crate::fso::asset::{Asset, AssetId};
@@ -243,7 +243,7 @@ pub type MutationId = u16;
 /// les étapes, à l’échelon de la commune, du canton et de la Confédération (1 =
 /// définitif) de celles qui n’ont pas encore franchi toutes les étapes (0 =
 /// provisoire).
-#[derive(Copy, Clone, Debug, Deserialize_repr)]
+#[derive(Copy, Clone, Debug, Serialize_repr, Deserialize_repr)]
 #[repr(u8)]
 pub enum Status {
     /// Provisorisch / Provisoire
@@ -251,7 +251,7 @@ pub enum Status {
     /// Definitiv / Définitif
     Final = 1,
 }
-#[derive(Copy, Clone, Debug, Deserialize_repr)]
+#[derive(Copy, Clone, Debug, Serialize_repr, Deserialize_repr)]
 #[repr(u8)]
 /// Type of municipality
 pub enum MunicipalityMode {
@@ -262,7 +262,7 @@ pub enum MunicipalityMode {
     /// Kantonaler Seeanteil / Partie cantonale de lac
     CantonalLakePortion = 13,
 }
-#[derive(Copy, Clone, Debug, Deserialize_repr)]
+#[derive(Copy, Clone, Debug, Serialize_repr, Deserialize_repr)]
 #[repr(u8)]
 /// Type of district
 pub enum DistrictMode {
@@ -273,7 +273,7 @@ pub enum DistrictMode {
     /// Bezirksfreies Gebiet / Territoire non attribué à un district
     DistrictFreeArea = 17,
 }
-#[derive(Copy, Clone, Debug, Deserialize_repr)]
+#[derive(Copy, Clone, Debug, Serialize_repr, Deserialize_repr)]
 #[repr(u8)]
 /// Type of action has trigg admission
 pub enum AdmissionMode {
@@ -293,7 +293,7 @@ pub enum AdmissionMode {
     /// commune/du district
     FormalRenumbering = 27,
 }
-#[derive(Copy, Clone, Debug, Deserialize_repr)]
+#[derive(Copy, Clone, Debug, Serialize_repr, Deserialize_repr)]
 #[repr(u8)]
 /// Type of action has trigg abolition
 pub enum AbolitionMode {
@@ -315,7 +315,7 @@ pub enum AbolitionMode {
 }
 
 /// Canton / Kanton / Canton
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Canton {
     /// Canton number / Kantonsnummer / Numéro du canton
     pub id: CantonId,
@@ -329,7 +329,7 @@ pub struct Canton {
 }
 
 /// Bezirk / District
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct District {
     /// Historic identifier
     /// / Historisierungsnummer BEZ
@@ -395,7 +395,7 @@ impl District {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 /// Municipality / Gemeinden / Commune
 pub struct Municipality {
     /// Municipality historical identifier
