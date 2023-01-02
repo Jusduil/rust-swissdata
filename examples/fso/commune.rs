@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::BTreeSet;
 use std::env;
 use std::error;
 
@@ -11,21 +11,8 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 
     let store = datastore();
     let ds = store.load(&reqwest::blocking::Client::new())?;
+    println!("{}\n\n", store.meta().to_l10n_string("fr"));
     let meta = store.meta();
-    println!(
-        "Data editor        : {}",
-        meta.editor.get_or_default("fr").name()
-    );
-    println!(
-        "Copyright          : {} -> {}",
-        meta.copyright.get_or_default("fr").name(),
-        meta.copyright.get_or_default("fr").url()
-    );
-    println!("Terms of use       : {:?}", meta.terms.get_or_default("fr"));
-    let terms = meta.terms_automatic;
-    println!("Commercial use     : {:?}", terms.free_commercial_use);
-    println!("Non-commercial use : {:?}", terms.free_noncommercial_use);
-    println!("Citation required  : {:?}", terms.citation_mandatory);
 
     let kt = ds
         .cantons

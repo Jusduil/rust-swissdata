@@ -30,6 +30,41 @@ pub struct Meta<S> {
     /// Citation for this data
     pub citations: Translated<Citation>,
 }
+impl<S> Meta<S>
+where
+    S: fmt::Display,
+{
+    /// Return the localized description
+    pub fn to_l10n_string(&self, lang: &str) -> String {
+        let name = self.name.get_or_default(lang);
+        let editor_name = self.editor.get_or_default(lang).name();
+        let editor_url = self.editor.get_or_default(lang).url();
+        let copyright_name = self.copyright.get_or_default(lang).name();
+        let copyright_url = self.copyright.get_or_default(lang).url();
+        let terms_name = self.terms.get_or_default(lang).name();
+        let terms_url = self.terms.get_or_default(lang).url();
+        let Terms {
+            free_commercial_use: co,
+            free_noncommercial_use: nc,
+            citation_mandatory: cite,
+        } = &self.terms_automatic;
+        let citations = self.citations.get_or_default(lang);
+        format!(
+            "## {name}
+editor: {editor_name}
+copyright: {copyright_name}
+terms: {terms_name}
+       commercial use allowed: {co:?}
+       non commercial use allowed: {nc:?}
+       citations mandatory: {cite:?}
+citations: {citations:?}
+
+[editor]: {editor_url}
+[copyright]: {copyright_url}
+[terms]: {terms_url}"
+        )
+    }
+}
 impl<S> fmt::Debug for Meta<S>
 where
     S: AsRef<str>,
