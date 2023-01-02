@@ -114,6 +114,17 @@ pub struct Link<S> {
     name: S,
     url: S,
 }
+impl<S> Link<S> {
+    /// Get the name to display
+    pub fn name(&self) -> &S {
+        &self.name
+    }
+
+    /// Url of link
+    pub fn url(&self) -> &S {
+        &self.url
+    }
+}
 impl<S> fmt::Debug for Link<S>
 where
     S: AsRef<str>,

@@ -25,7 +25,11 @@
 //!   - [download][data-xml]
 //!   - [Terms of use 'OPEN-BY-ASK'][terms]
 //!
-//!
+//! # Example (`examples/fso/commune.rs`)
+//! ```no_run
+#![doc=include_str!("../../examples/fso/commune.rs")]
+//! ```
+//! 
 //! [eCH-0071-de]: https://www.ech.ch/fr/ech/ech-0071/1.1
 //! [eCH-0071-fr]: https://www.ech.ch/de/ech/ech-0071/1.1
 //! [webexpl-de]: https://www.bfs.admin.ch/bfs/de/home/grundlagen/agvch/historisiertes-gemeindeverzeichnis.html
@@ -47,10 +51,10 @@ use std::marker::PhantomData;
 use csv::{DeserializeRecordsIntoIter, ReaderBuilder as CsvReaderBuilder};
 use encoding_rs;
 use encoding_rs::ISO_8859_3 as ENCODING;
-use encoding_rs_io::{DecodeReaderBytes, DecodeReaderBytesBuilder};
+use encoding_rs_io::DecodeReaderBytesBuilder;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use zip::{read::ZipFile, ZipArchive};
+use zip::ZipArchive;
 
 use crate::fso::asset::{Asset, AssetId};
 use crate::i_serde;
@@ -68,8 +72,34 @@ pub const TXT_FSO_ID: &str = "dz-b-00.04-hgv-01";
 /// FSO identifier about dataset on XML format
 pub const XML_FSO_ID: &str = "dz-b-00.04-hgv-03";
 
-/// An iterator on [Canton], [District] or [Municipality] according to T
-pub type Iter<'a, T> = DeserializeRecordsIntoIter<DecodeReaderBytes<ZipFile<'a>, Vec<u8>>, T>;
+/// Filter iterator for [Dataset]
+///
+/// see [Dataset::actual], [Dataset::into_actual], [Dataset::historic],
+/// [Dataset::into_historic]
+pub struct FilterIter<I>
+where
+    I: Iterator,
+{
+    inner: I,
+    actual: Option<bool>,
+}
+impl<I, V, E> Iterator for FilterIter<I>
+where
+    I: Iterator<Item = Result<V, E>>,
+    V: Abolitable,
+{
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.inner.next()? {
+                Err(e) => return Some(Err(e)),
+                Ok(v) if Some(v.is_actual()) == self.actual => return Some(Ok(v)),
+                _ => continue,
+            }
+        }
+    }
+}
 
 /// Get the communes FSO datastore
 pub fn datastore() -> Datastore {
@@ -189,6 +219,47 @@ impl<T> Dataset<T> {
             .has_headers(false)
     }
 }
+impl<T> Dataset<T>
+where
+    T: for<'de> Deserialize<'de>,
+{
+    /// Iterate on actual value
+    pub fn actual(&self) -> FilterIter<<&Self as IntoIterator>::IntoIter> {
+        FilterIter {
+            inner: self.iter(),
+            actual: Some(true),
+        }
+    }
+
+    /// Iterate on actual value
+    pub fn into_actual(self) -> FilterIter<<Self as IntoIterator>::IntoIter> {
+        FilterIter {
+            inner: self.into_iter(),
+            actual: Some(true),
+        }
+    }
+
+    /// Iterate on non actual value
+    pub fn historic(&self) -> FilterIter<<&Self as IntoIterator>::IntoIter> {
+        FilterIter {
+            inner: self.iter(),
+            actual: Some(false),
+        }
+    }
+
+    /// Iterate on non actual value
+    pub fn into_historic(self) -> FilterIter<<Self as IntoIterator>::IntoIter> {
+        FilterIter {
+            inner: self.into_iter(),
+            actual: Some(false),
+        }
+    }
+
+    /// Iter on data
+    pub fn iter(&self) -> <&Self as IntoIterator>::IntoIter {
+        self.into_iter()
+    }
+}
 impl<'a, T> IntoIterator for &'a Dataset<T>
 where
     T: for<'de> Deserialize<'de>,
@@ -251,7 +322,9 @@ pub enum Status {
     /// Definitiv / Définitif
     Final = 1,
 }
-#[derive(Copy, Clone, Debug, Serialize_repr, Deserialize_repr)]
+#[derive(
+    Copy, Clone, Debug, Serialize_repr, Deserialize_repr, Ord, PartialOrd, Eq, PartialEq, Hash,
+)]
 #[repr(u8)]
 /// Type of municipality
 pub enum MunicipalityMode {
@@ -262,7 +335,9 @@ pub enum MunicipalityMode {
     /// Kantonaler Seeanteil / Partie cantonale de lac
     CantonalLakePortion = 13,
 }
-#[derive(Copy, Clone, Debug, Serialize_repr, Deserialize_repr)]
+#[derive(
+    Copy, Clone, Debug, Serialize_repr, Deserialize_repr, Ord, PartialOrd, Eq, PartialEq, Hash,
+)]
 #[repr(u8)]
 /// Type of district
 pub enum DistrictMode {
@@ -328,6 +403,19 @@ pub struct Canton {
     pub date_of_change: Date,
 }
 
+/// Indaction of mutation for mutable entry (District and Municipality)
+pub trait Abolitable {
+    /// Information about admission
+    fn admission(&self) -> Mutation<AdmissionMode>;
+    /// Information about abolition (if is abolited)
+    fn abolition(&self) -> Option<Mutation<AbolitionMode>>;
+
+    /// Indicator if this entry isn't revocked
+    fn is_actual(&self) -> bool {
+        self.abolition().is_none()
+    }
+}
+
 /// Bezirk / District
 #[derive(Debug, Serialize, Deserialize)]
 pub struct District {
@@ -375,9 +463,8 @@ pub struct District {
     #[serde(with = "i_serde::date_dd_mm_yyyyy_dotted")]
     pub date_of_change: Date,
 }
-impl District {
-    /// Information about district admission
-    pub fn admission(&self) -> Mutation<AdmissionMode> {
+impl Abolitable for District {
+    fn admission(&self) -> Mutation<AdmissionMode> {
         Mutation {
             number: self.admission_number,
             mode: self.admission_mode,
@@ -385,8 +472,7 @@ impl District {
         }
     }
 
-    /// Information about district abolition (if is abolited)
-    pub fn abolition(&self) -> Option<Mutation<AbolitionMode>> {
+    fn abolition(&self) -> Option<Mutation<AbolitionMode>> {
         Some(Mutation {
             number: self.abolition_number?,
             mode: self.abolition_mode?,
@@ -434,9 +520,8 @@ pub struct Municipality {
     #[serde(with = "i_serde::date_dd_mm_yyyyy_dotted")]
     pub date_of_change: Date,
 }
-impl Municipality {
-    /// Information about district admission
-    pub fn admission(&self) -> Mutation<AdmissionMode> {
+impl Abolitable for Municipality {
+    fn admission(&self) -> Mutation<AdmissionMode> {
         Mutation {
             number: self.admission_number,
             mode: self.admission_mode,
@@ -444,8 +529,7 @@ impl Municipality {
         }
     }
 
-    /// Information about district abolition (if is abolited)
-    pub fn abolition(&self) -> Option<Mutation<AbolitionMode>> {
+    fn abolition(&self) -> Option<Mutation<AbolitionMode>> {
         Some(Mutation {
             number: self.abolition_number?,
             mode: self.abolition_mode?,
