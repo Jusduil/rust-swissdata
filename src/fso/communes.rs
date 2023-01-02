@@ -43,7 +43,6 @@ use std::fs::File;
 use std::io::Cursor;
 use std::io::Read;
 use std::marker::PhantomData;
-use std::path::PathBuf;
 
 use csv::{DeserializeRecordsIntoIter, ReaderBuilder as CsvReaderBuilder};
 use encoding_rs;
@@ -72,6 +71,7 @@ pub const XML_FSO_ID: &'static str = "dz-b-00.04-hgv-03";
 /// An iterator on [Canton], [District] or [Municipality] according to T
 pub type Iter<'a, T> = DeserializeRecordsIntoIter<DecodeReaderBytes<ZipFile<'a>, Vec<u8>>, T>;
 
+/// Get the communes FSO datastore
 pub fn datastore() -> Datastore {
     Datastore { _none: () }
 }
@@ -161,31 +161,17 @@ impl dataset::Datastore<&'static str> for Datastore {
     }
 }
 
+/// This struct contains all dataset can be retreive from data
 pub struct Datasets {
+    /// Canton / Kanton / Canton
     pub cantons: Dataset<Canton>,
+    /// District / Bezirk / District
     pub districts: Dataset<District>,
+    /// Municipality / Gemeinden / Commune
     pub municipalities: Dataset<Municipality>,
 }
 
-pub struct DatasetIter<T> {
-    zip: ZipArchive<File>,
-    it: Option<Box<dyn Iterator<Item = Result<T, csv::Error>>>>,
-    phantom: PhantomData<T>,
-}
-impl<T> DatasetIter<T>
-where
-    T: for<'de> Deserialize<'de>,
-{
-    fn new(path: PathBuf, inzip_filename: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let file = File::open(&path)?;
-        let zip = ZipArchive::new(file)?;
-        Ok(Self {
-            it: None,
-            zip,
-            phantom: PhantomData,
-        })
-    }
-}
+/// Represent a set of data, this is iterable
 pub struct Dataset<T> {
     raw: String,
     phantom: PhantomData<T>,
@@ -229,49 +215,6 @@ where
         self.csv_reader_builder(&mut builder)
             .from_reader(Cursor::new(self.raw.into_bytes()))
             .into_deserialize()
-    }
-}
-
-/// Struct for acess data stored in zip archive
-pub struct DataStore {
-    path: PathBuf,
-    zip: ZipArchive<File>,
-    cantons: String,
-    districts: String,
-    municipalities: String,
-}
-impl DataStore {
-    fn iter<T>(&mut self, file: String) -> Result<Iter<T>, Box<dyn error::Error>>
-    where
-        T: for<'de> Deserialize<'de>,
-    {
-        let reader = self.zip.by_name(&file)?;
-        let decoder = DecodeReaderBytesBuilder::new()
-            .encoding(Some(ENCODING))
-            .build(reader);
-        Ok(CsvReaderBuilder::new()
-            .ascii()
-            .delimiter(b'\t')
-            .terminator(csv::Terminator::CRLF)
-            .quoting(false)
-            .has_headers(false)
-            .from_reader(decoder)
-            .into_deserialize())
-    }
-
-    /// Iter on all cantons
-    pub fn cantons(&mut self) -> Result<Iter<Canton>, Box<dyn error::Error>> {
-        self.iter(self.cantons.clone())
-    }
-
-    /// Iter on all districts
-    pub fn districts(&mut self) -> Result<Iter<District>, Box<dyn error::Error>> {
-        self.iter(self.districts.clone())
-    }
-
-    /// Iter on all municipalities
-    pub fn municipalities(&mut self) -> Result<Iter<Municipality>, Box<dyn error::Error>> {
-        self.iter(self.municipalities.clone())
     }
 }
 
@@ -374,97 +317,65 @@ pub enum AbolitionMode {
 /// Canton / Kanton / Canton
 #[derive(Debug, Deserialize)]
 pub struct Canton {
-    id: CantonId,
-    abbreviation: String,
-    long_name: String,
-    #[serde(with = "i_serde::date_dd_mm_yyyyy_dotted")]
-    date_of_change: Date,
-}
-impl Canton {
     /// Canton number / Kantonsnummer / Numéro du canton
-    pub fn id(&self) -> CantonId {
-        self.id
-    }
-
+    pub id: CantonId,
     /// Canton's abbreviation / Kantonskürzel / Abréviation du canton
-    pub fn abbreviation(&self) -> &str {
-        self.abbreviation.as_str()
-    }
-
+    pub abbreviation: String,
     /// Canton's name / Kantonsname / Nom du canton
-    pub fn name(&self) -> &str {
-        self.long_name.as_str()
-    }
-
+    pub name: String,
+    #[serde(with = "i_serde::date_dd_mm_yyyyy_dotted")]
     /// Change date / Änderungsdatum / Date de modification
-    pub fn date_of_change(&self) -> &Date {
-        &self.date_of_change
-    }
+    pub date_of_change: Date,
 }
 
 /// Bezirk / District
 #[derive(Debug, Deserialize)]
 pub struct District {
-    hist_id: DistrictHistId,
-    canton_id: CantonId,
-    id: DistrictId,
-    long_name: String,
-    short_name: String,
-    entry_mode: DistrictMode,
-    admission_number: MutationId,
-    admission_mode: AdmissionMode,
-    #[serde(with = "i_serde::date_dd_mm_yyyyy_dotted")]
-    admission_date: Date,
-    abolition_number: Option<MutationId>,
-    abolition_mode: Option<AbolitionMode>,
-    #[serde(with = "i_serde::option_date_dd_mm_yyyyy_dotted")]
-    abolition_date: Option<Date>,
-    #[serde(with = "i_serde::date_dd_mm_yyyyy_dotted")]
-    date_of_change: Date,
-}
-impl District {
     /// Historic identifier
     /// / Historisierungsnummer BEZ
     /// / Numéro d’historisation DIS
-    pub fn hist_id(&self) -> DistrictHistId {
-        self.hist_id
-    }
-
+    pub hist_id: DistrictHistId,
     /// Canton identifier
     /// / Kantonsnummer
     /// / Numéro du canton
-    pub fn canton_id(&self) -> CantonId {
-        self.canton_id
-    }
-
+    pub canton_id: CantonId,
     /// District identifier
     /// / Bezirksnummer
     /// / Numéro du district
-    pub fn id(&self) -> DistrictId {
-        self.id
-    }
-
+    pub id: DistrictId,
     /// District name
     /// / Bezirksname
     /// / Nom du district
-    pub fn name(&self) -> &str {
-        self.long_name.as_str()
-    }
-
+    pub name: String,
     /// District abbreviated name
     /// / Bezirksname kurz
     /// / Nom du district en abrégé
-    pub fn short_name(&self) -> &str {
-        self.short_name.as_str()
-    }
-
+    pub short_name: String,
     /// Entry type
     /// / Art des Eintrages
     /// / Type d’entrée
-    pub fn entry_mode(&self) -> DistrictMode {
-        self.entry_mode
-    }
-
+    pub entry_mode: DistrictMode,
+    /// please see [Self::admission] for get a Mutation struct
+    pub admission_number: MutationId,
+    /// please see [Self::admission] for get a Mutation struct
+    pub admission_mode: AdmissionMode,
+    /// please see [Self::admission] for get a Mutation struct
+    #[serde(with = "i_serde::date_dd_mm_yyyyy_dotted")]
+    pub admission_date: Date,
+    /// please see [Self::abolition] for get a Mutation struct
+    pub abolition_number: Option<MutationId>,
+    /// please see [Self::abolition] for get a Mutation struct
+    pub abolition_mode: Option<AbolitionMode>,
+    /// please see [Self::abolition] for get a Mutation struct
+    #[serde(with = "i_serde::option_date_dd_mm_yyyyy_dotted")]
+    pub abolition_date: Option<Date>,
+    /// Date of the last change
+    /// / Änderungsdatum
+    /// / Date de modification
+    #[serde(with = "i_serde::date_dd_mm_yyyyy_dotted")]
+    pub date_of_change: Date,
+}
+impl District {
     /// Information about district admission
     pub fn admission(&self) -> Mutation<AdmissionMode> {
         Mutation {
@@ -481,79 +392,49 @@ impl District {
             mode: self.abolition_mode?,
             date: self.abolition_date.as_ref()?,
         })
-    }
-
-    /// Date of the last change
-    /// / Änderungsdatum
-    /// / Date de modification
-    pub fn date_of_change(&self) -> &Date {
-        &self.date_of_change
     }
 }
 
 #[derive(Debug, Deserialize)]
 /// Municipality / Gemeinden / Commune
 pub struct Municipality {
-    hist_id: MunicipalityHistId,
-    district_hist_id: DistrictHistId,
-    canton_abbreviation: String,
-    id: MunicipalityId,
-    long_name: String,
-    short_name: String,
-    entry_mode: MunicipalityMode,
-    status: Status,
-    admission_number: MutationId,
-    admission_mode: AdmissionMode,
+    /// Municipality historical identifier
+    pub hist_id: MunicipalityHistId,
+    /// District historical identifier
+    pub district_hist_id: DistrictHistId,
+    /// Abbreviation of canton (two letter)
+    pub canton_abbreviation: String,
+    /// Municipality identifier
+    pub id: MunicipalityId,
+    /// Municipality official name
+    pub name: String,
+    /// Municipality abbreviated name
+    pub short_name: String,
+    /// Type of municipality
+    pub entry_mode: MunicipalityMode,
+    /// Status of change
+    pub status: Status,
+    /// please see [Self::admission] for get a Mutation struct
+    pub admission_number: MutationId,
+    /// please see [Self::admission] for get a Mutation struct
+    pub admission_mode: AdmissionMode,
+    /// please see [Self::admission] for get a Mutation struct
     #[serde(with = "i_serde::date_dd_mm_yyyyy_dotted")]
-    admission_date: Date,
-    abolition_number: Option<MutationId>,
-    abolition_mode: Option<AbolitionMode>,
+    pub admission_date: Date,
+    /// please see [Self::abolition] for get a Mutation struct
+    pub abolition_number: Option<MutationId>,
+    /// please see [Self::abolition] for get a Mutation struct
+    pub abolition_mode: Option<AbolitionMode>,
+    /// please see [Self::abolition] for get a Mutation struct
     #[serde(with = "i_serde::option_date_dd_mm_yyyyy_dotted")]
-    abolition_date: Option<Date>,
+    pub abolition_date: Option<Date>,
+    /// Date of the last change
+    /// / Änderungsdatum
+    /// / Date de modification
     #[serde(with = "i_serde::date_dd_mm_yyyyy_dotted")]
-    date_of_change: Date,
+    pub date_of_change: Date,
 }
 impl Municipality {
-    /// Municipality historical identifier
-    pub fn hist_id(&self) -> MunicipalityHistId {
-        self.hist_id
-    }
-
-    /// District historical identifier
-    pub fn district_hist_id(&self) -> DistrictHistId {
-        self.district_hist_id
-    }
-
-    /// Abbreviation of canton (two letter)
-    pub fn canton_abbreviation(&self) -> &str {
-        self.canton_abbreviation.as_str()
-    }
-
-    /// Municipality identifier
-    pub fn id(&self) -> MunicipalityId {
-        self.id
-    }
-
-    /// Municipality official name
-    pub fn name(&self) -> &str {
-        self.long_name.as_str()
-    }
-
-    /// Municipality abbreviated name
-    pub fn short_name(&self) -> &str {
-        self.short_name.as_str()
-    }
-
-    /// Type of municipality
-    pub fn entry_mode(&self) -> MunicipalityMode {
-        self.entry_mode
-    }
-
-    /// Status of change
-    pub fn status(&self) -> Status {
-        self.status
-    }
-
     /// Information about district admission
     pub fn admission(&self) -> Mutation<AdmissionMode> {
         Mutation {
@@ -571,35 +452,15 @@ impl Municipality {
             date: self.abolition_date.as_ref()?,
         })
     }
-
-    /// Date of the last change
-    /// / Änderungsdatum
-    /// / Date de modification
-    pub fn date_of_change(&self) -> &Date {
-        &self.date_of_change
-    }
 }
 
 #[derive(Debug)]
 /// A mutation data (admission or abolition)
 pub struct Mutation<'a, Mode: Copy> {
-    number: MutationId,
-    mode: Mode,
-    date: &'a Date,
-}
-impl<Mode: Copy> Mutation<'_, Mode> {
     /// Identifier of Mutation
-    pub fn id(&self) -> MutationId {
-        self.number
-    }
-
+    pub number: MutationId,
     /// Reason of mutation
-    pub fn mode(&self) -> Mode {
-        self.mode
-    }
-
+    pub mode: Mode,
     /// Date of mutation
-    pub fn date(&self) -> &Date {
-        self.date
-    }
+    pub date: &'a Date,
 }
