@@ -2,7 +2,6 @@
 
 pub mod dataset;
 pub mod downloader;
-pub mod editor;
 pub(crate) mod internal;
 pub mod message;
 pub mod meta;
