@@ -1,9 +1,8 @@
 //! Struct represent meta information about dataset
 
-use std::collections::HashMap;
 use std::fmt;
 
-use super::message::{LinkedMessage, Message, Translated};
+use super::message::{Link, Translated};
 
 /// Meta information about dataset
 pub struct Meta<S> {
@@ -13,13 +12,13 @@ pub struct Meta<S> {
     pub(crate) lang: Option<Vec<String>>,
 
     /// Editor of datased
-    pub(crate) editor: LinkedMessage<S>,
+    pub(crate) editor: Translated<Link<S>>,
 
     /// Copyright information about dataset
-    pub(crate) copyright: LinkedMessage<S>,
+    pub(crate) copyright: Translated<Link<S>>,
 
     /// Terms of use
-    pub(crate) terms: LinkedMessage<S>,
+    pub(crate) terms: Translated<Link<S>>,
 
     /// Terms of use (WARNING: Same mistake are possible, please check with link
     /// on [Meta::terms] before use dataset, thanks)

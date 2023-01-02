@@ -1,19 +1,28 @@
+//! Some struct for manage translated message to user
+
 use std::collections::BTreeMap;
 use std::fmt;
 
+/// Represent a T translated
+///
+/// Warning: FromIterator is implemented, but if iterator is empty, return a
+/// Translated with T::default(), usually, this is not you want)
 pub struct Translated<T> {
     contents: BTreeMap<String, T>,
     default: String,
 }
 impl<T> Translated<T> {
+    /// Get the T for default language
     pub fn default(&self) -> &T {
         self.contents.get(&self.default).unwrap()
     }
 
+    /// Get the T for the selected language if exists
     pub fn get<S: AsRef<str>>(&self, key: S) -> Option<&T> {
         self.contents.get(key.as_ref())
     }
 
+    /// Get the T for the selected language or default language if not
     pub fn get_or_default<S: AsRef<str>>(&self, key: S) -> &T {
         self.get(key).unwrap_or_else(|| self.default())
     }
@@ -34,7 +43,7 @@ where
     T: fmt::Debug,
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        if fmt.alternate() && false {
+        if fmt.alternate() {
             let mut dbg = fmt.debug_struct("Translated");
             for (k, v) in &self.contents {
                 let k = if k == &self.default {
@@ -98,9 +107,8 @@ where
         iter.into_iter().map(|(a, b, c)| (a, (b, c))).collect()
     }
 }
-pub type Message = Translated<String>;
-pub type LinkedMessage<S> = Translated<Link<S>>;
 
+/// A link with description
 #[derive(Default)]
 pub struct Link<S> {
     name: S,

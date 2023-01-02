@@ -9,7 +9,8 @@ pub mod asset;
 
 use internal::*;
 mod internal {
-    use crate::tools::message::LinkedMessage;
+    use crate::tools::message::{Link, Translated};
+    type LinkedMessage<T> = Translated<Link<T>>;
     pub fn editor() -> LinkedMessage<&'static str> {
         [
             (
