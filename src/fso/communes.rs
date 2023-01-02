@@ -40,6 +40,10 @@
 use std::collections::HashMap;
 use std::error;
 use std::fs::File;
+use std::io::Cursor;
+use std::io::Read;
+use std::marker::PhantomData;
+use std::path::PathBuf;
 
 use csv::{DeserializeRecordsIntoIter, ReaderBuilder as CsvReaderBuilder};
 use encoding_rs;
@@ -52,6 +56,7 @@ use zip::{read::ZipFile, ZipArchive};
 use crate::fso::asset::{Asset, AssetId};
 use crate::i_serde;
 use crate::tools::Downloader;
+use crate::tools::{dataset, meta};
 use crate::Date;
 
 /// FSO Asset id for TXT format
@@ -67,33 +72,53 @@ pub const XML_FSO_ID: &'static str = "dz-b-00.04-hgv-03";
 /// An iterator on [Canton], [District] or [Municipality] according to T
 pub type Iter<'a, T> = DeserializeRecordsIntoIter<DecodeReaderBytes<ZipFile<'a>, Vec<u8>>, T>;
 
-/// Get asset for text format (multiple CSV (tab separator) in a zip)
-pub fn asset_txt() -> Asset {
-    TXT_ASSET_ID.into()
-}
-/// Get asset for xml format (XML and XSD in a zip)
-pub fn asset_xml() -> Asset {
-    XML_ASSET_ID.into()
+pub fn datastore() -> Datastore {
+    Datastore { _none: () }
 }
 
-/// Struct for acess data stored in zip archive
-pub struct DataStore {
-    zip: ZipArchive<File>,
-    cantons: String,
-    districts: String,
-    municipalities: String,
+/// Load data (format TXT only for now) with downloader, keep a reference to
+/// zip file downloaded
+#[derive(Default)]
+pub struct Datastore {
+    _none: (),
 }
-impl DataStore {
-    /// Load data (format TXT only for now) with downloader, keep a reference to
-    /// zip file downloaded
-    pub fn load<D>(downloader: D) -> Result<Self, Box<dyn error::Error>>
+impl Datastore {
+    /// Get asset for text format (multiple CSV (tab separator) in a zip)
+    pub fn asset(&self) -> Asset {
+        TXT_ASSET_ID.into()
+    }
+
+    /// Get asset for xml format (XML and XSD in a zip)
+    pub fn asset_xml(&self) -> Asset {
+        XML_ASSET_ID.into()
+    }
+}
+impl dataset::Datastore<&'static str> for Datastore {
+    type Store = Datasets;
+
+    fn meta(&self) -> meta::Meta<&'static str> {
+        meta::Meta {
+            lang: None,
+            editor: super::editor(),
+            copyright: super::copyright(),
+            terms: super::terms("OPEN-BY-ASK"),
+            terms_automatic: meta::Terms {
+                free_commercial_use: false,
+                free_noncommercial_use: true,
+                citation_mandatory: true,
+            },
+            citations: Default::default(),
+        }
+    }
+
+    fn load<D>(&self, downloader: D) -> Result<Self::Store, Box<dyn error::Error>>
     where
         D: Downloader,
     {
-        let path = asset_txt().data_file(downloader)?;
-        let file = File::open(path)?;
-        let zip = ZipArchive::new(file)?;
-        let zippath: HashMap<_, _> = zip
+        let path = self.asset().data_file(downloader)?;
+        let file = File::open(&path)?;
+        let mut zip = ZipArchive::new(file)?;
+        let zippath: HashMap<String, String> = zip
             .file_names()
             .filter_map(|name| {
                 Some((
@@ -101,33 +126,121 @@ impl DataStore {
                         .strip_prefix("/1.2/")?
                         .strip_suffix(".txt")?
                         .split('_')
-                        .nth(2)?,
-                    name,
+                        .nth(2)?
+                        .into(),
+                    name.into(),
                 ))
             })
             .collect();
 
-        let cantons = zippath
-            .get("KT")
-            .ok_or("Missing cantons file in archive")?
-            .to_string();
-        let districts = zippath
-            .get("BEZ")
-            .ok_or("Missing districts file in archive")?
-            .to_string();
-        let municipalities = zippath
-            .get("GDE")
-            .ok_or("Missing municipalities file in archive")?
-            .to_string();
+        fn zip_to_dataset<T>(
+            zippath: &HashMap<String, String>,
+            zip: &mut ZipArchive<File>,
+            fname: &str,
+        ) -> Result<Dataset<T>, Box<dyn error::Error>> {
+            let fname = zippath
+                .get(fname)
+                .ok_or("Missing cantons file in archive")?
+                .to_string();
+            let mut output = "".into();
+            DecodeReaderBytesBuilder::new()
+                .encoding(Some(ENCODING))
+                .build(zip.by_name(&fname)?)
+                .read_to_string(&mut output)?;
+            Ok(Dataset {
+                raw: output,
+                phantom: PhantomData,
+            })
+        }
 
-        Ok(Self {
-            zip,
-            cantons,
-            districts,
-            municipalities,
+        Ok(Self::Store {
+            cantons: zip_to_dataset(&zippath, &mut zip, "KT")?,
+            districts: zip_to_dataset(&zippath, &mut zip, "BEZ")?,
+            municipalities: zip_to_dataset(&zippath, &mut zip, "GDE")?,
         })
     }
+}
 
+pub struct Datasets {
+    pub cantons: Dataset<Canton>,
+    pub districts: Dataset<District>,
+    pub municipalities: Dataset<Municipality>,
+}
+
+pub struct DatasetIter<T> {
+    zip: ZipArchive<File>,
+    it: Option<Box<dyn Iterator<Item = Result<T, csv::Error>>>>,
+    phantom: PhantomData<T>,
+}
+impl<T> DatasetIter<T>
+where
+    T: for<'de> Deserialize<'de>,
+{
+    fn new(path: PathBuf, inzip_filename: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        let file = File::open(&path)?;
+        let zip = ZipArchive::new(file)?;
+        Ok(Self {
+            it: None,
+            zip,
+            phantom: PhantomData,
+        })
+    }
+}
+pub struct Dataset<T> {
+    raw: String,
+    phantom: PhantomData<T>,
+}
+impl<T> Dataset<T> {
+    fn csv_reader_builder<'a>(
+        &self,
+        csvbuilder: &'a mut CsvReaderBuilder,
+    ) -> &'a mut CsvReaderBuilder {
+        csvbuilder
+            .ascii()
+            .delimiter(b'\t')
+            .terminator(csv::Terminator::CRLF)
+            .quoting(false)
+            .has_headers(false)
+    }
+}
+impl<'a, T> IntoIterator for &'a Dataset<T>
+where
+    T: for<'de> Deserialize<'de>,
+{
+    type IntoIter = DeserializeRecordsIntoIter<Cursor<&'a [u8]>, T>;
+    type Item = Result<T, csv::Error>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let mut builder = CsvReaderBuilder::new();
+        self.csv_reader_builder(&mut builder)
+            .from_reader(Cursor::new(self.raw.as_bytes()))
+            .into_deserialize()
+    }
+}
+impl<T> IntoIterator for Dataset<T>
+where
+    T: for<'de> Deserialize<'de>,
+{
+    type IntoIter = DeserializeRecordsIntoIter<Cursor<Vec<u8>>, T>;
+    type Item = Result<T, csv::Error>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let mut builder = CsvReaderBuilder::new();
+        self.csv_reader_builder(&mut builder)
+            .from_reader(Cursor::new(self.raw.into_bytes()))
+            .into_deserialize()
+    }
+}
+
+/// Struct for acess data stored in zip archive
+pub struct DataStore {
+    path: PathBuf,
+    zip: ZipArchive<File>,
+    cantons: String,
+    districts: String,
+    municipalities: String,
+}
+impl DataStore {
     fn iter<T>(&mut self, file: String) -> Result<Iter<T>, Box<dyn error::Error>>
     where
         T: for<'de> Deserialize<'de>,
