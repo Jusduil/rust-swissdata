@@ -6,6 +6,9 @@ use super::message::{Link, Translated};
 
 /// Meta information about dataset
 pub struct Meta<S> {
+    /// Dataset name
+    pub name: Translated<S>,
+
     /// Supported language of data (french, english, ...).
     ///
     /// If None data is language independant.
@@ -50,6 +53,13 @@ pub struct Citation {
     ris: Option<String>,
 }
 impl Citation {
+    pub(crate) fn new<S: AsRef<str>>(bibtex: S, ris: S) -> Self {
+        Self {
+            bibtex: Some(bibtex.as_ref().to_string()),
+            ris: Some(ris.as_ref().to_string()),
+        }
+    }
+
     /// Get bibTeX for cite dataset
     pub fn bibtex(&self) -> Option<String> {
         self.bibtex.clone()

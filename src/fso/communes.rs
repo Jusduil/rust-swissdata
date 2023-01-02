@@ -128,6 +128,22 @@ impl dataset::Datastore<&'static str> for Datastore {
 
     fn meta(&self) -> meta::Meta<&'static str> {
         meta::Meta {
+            name: [
+                (
+                    "de",
+                    "Historisiertes Gemeindeverzeichnis der Schweiz  (TXT Format)",
+                ),
+                (
+                    "fr",
+                    "Liste historisée des communes de la Suisse (format TXT)",
+                ),
+                (
+                    "it",
+                    "Elenco storicizzato dei Comuni della Svizzera  (formato TXT)",
+                ),
+            ]
+            .into_iter()
+            .collect(),
             lang: None,
             editor: super::editor(),
             copyright: super::copyright(),
@@ -137,7 +153,38 @@ impl dataset::Datastore<&'static str> for Datastore {
                 free_noncommercial_use: true,
                 citation_mandatory: true,
             },
-            citations: Default::default(),
+            citations: [
+                (
+                    "en",
+                    meta::Citation::new(
+                        include_str!("communes.en.bib"),
+                        include_str!("communes.en.ris"),
+                    ),
+                ),
+                (
+                    "de",
+                    meta::Citation::new(
+                        include_str!("communes.de.bib"),
+                        include_str!("communes.de.ris"),
+                    ),
+                ),
+                (
+                    "fr",
+                    meta::Citation::new(
+                        include_str!("communes.fr.bib"),
+                        include_str!("communes.fr.ris"),
+                    ),
+                ),
+                (
+                    "it",
+                    meta::Citation::new(
+                        include_str!("communes.it.bib"),
+                        include_str!("communes.it.ris"),
+                    ),
+                ),
+            ]
+            .into_iter()
+            .collect(),
         }
     }
 
