@@ -42,14 +42,32 @@ where
     }
 }
 
+/// Represent citation of data
 #[derive(Default, Debug)]
 pub struct Citation {
     bibtex: Option<String>,
     ris: Option<String>,
 }
+impl Citation {
+    /// Get bibTeX for cite dataset
+    pub fn bibtex(&self) -> Option<String> {
+        self.bibtex.clone()
+    }
+
+    /// Get RIS for cite dataset
+    pub fn ris(&self) -> Option<String> {
+        self.ris.clone()
+    }
+}
+/// Resume terms of use of data
 #[derive(Debug)]
 pub struct Terms {
-    pub(crate) free_commercial_use: bool,
-    pub(crate) free_noncommercial_use: bool,
-    pub(crate) citation_mandatory: bool,
+    /// Data can be royalty-free use for commercial use
+    pub free_commercial_use: bool,
+    /// Data can be royalty-free use for non-commercial use
+    pub free_noncommercial_use: bool,
+    /// Citation is mandatory when data use
+    ///
+    /// Recommands: ALWAYS cite your data
+    pub citation_mandatory: bool,
 }

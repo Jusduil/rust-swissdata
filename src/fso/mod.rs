@@ -91,7 +91,7 @@ mod internal {
             ),
             (
                 "it".into(),
-                title.clone(),
+                title,
                 "https://www.bfs.admin.ch/bfs/it/home/ust/ufficio-federale-statistica/condizioni-uso.html".into(),
             ),
         ]

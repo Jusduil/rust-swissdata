@@ -60,6 +60,6 @@ impl Downloader for &reqwest::blocking::Client {
 
     fn http_get(&self, url: &str) -> Result<Self::Read, Self::DownloadError> {
         dbg!(url);
-        Ok(self.get(url).send()?.error_for_status()?)
+        self.get(url).send()?.error_for_status()
     }
 }

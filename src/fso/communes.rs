@@ -64,9 +64,9 @@ pub const TXT_ASSET_ID: AssetId = 23886071;
 pub const XML_ASSET_ID: AssetId = 23886070;
 
 /// FSO identifier about dataset on TXT format
-pub const TXT_FSO_ID: &'static str = "dz-b-00.04-hgv-01";
+pub const TXT_FSO_ID: &str = "dz-b-00.04-hgv-01";
 /// FSO identifier about dataset on XML format
-pub const XML_FSO_ID: &'static str = "dz-b-00.04-hgv-03";
+pub const XML_FSO_ID: &str = "dz-b-00.04-hgv-03";
 
 /// An iterator on [Canton], [District] or [Municipality] according to T
 pub type Iter<'a, T> = DeserializeRecordsIntoIter<DecodeReaderBytes<ZipFile<'a>, Vec<u8>>, T>;
@@ -116,7 +116,7 @@ impl dataset::Datastore<&'static str> for Datastore {
         D: Downloader,
     {
         let path = self.asset().data_file(downloader)?;
-        let file = File::open(&path)?;
+        let file = File::open(path)?;
         let mut zip = ZipArchive::new(file)?;
         let zippath: HashMap<String, String> = zip
             .file_names()

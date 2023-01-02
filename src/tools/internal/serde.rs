@@ -3,7 +3,7 @@ pub mod option_date_dd_mm_yyyyy_dotted {
 
     use crate::Date;
 
-    const FORMAT: &'static str = "%d.%m.%Y";
+    const FORMAT: &str = "%d.%m.%Y";
 
     pub fn serialize<S>(date: &Option<Date>, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -32,7 +32,7 @@ pub mod date_dd_mm_yyyyy_dotted {
 
     use crate::Date;
 
-    const FORMAT: &'static str = "%d.%m.%Y";
+    const FORMAT: &str = "%d.%m.%Y";
 
     pub fn serialize<S>(date: &Date, serializer: S) -> Result<S::Ok, S::Error>
     where
