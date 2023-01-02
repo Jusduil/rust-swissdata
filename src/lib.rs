@@ -8,6 +8,11 @@
 //#![deny(warnings)]
 #![feature(type_changing_struct_update)]
 
+//!
+#![doc=include_str!("../README.md")]
+//!
+//! ## TODO
+//!
 //! Crate for access some data of Switzerland
 //!
 //! - [OpenData Swiss](https://opendata.swiss/)
